@@ -61,6 +61,12 @@ def load_policy_and_env(fpath, itr='last', deterministic=False):
     except:
         env = None
 
+    if env is not None and "PyBullet" in str(env.env):
+        #from IPython import embed; embed(); sys.exit()
+        import gym
+        env = gym.make(str(env).split('<')[-1].split('>')[0] )
+        _ = env.render(mode='human')
+
     return env, get_action
 
 
