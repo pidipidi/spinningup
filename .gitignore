@@ -1,10 +1,12 @@
-*.*~
-__pycache__/
+*~
+*.pyc
+*#
+.#*
 *.pkl
-data/
-**/*.egg-info
-.python-version
-.idea/
-.vscode/
-.DS_Store
-_build/
+*.zip
+*.bak
+*.bag
+
+# Specific files and folders
+############################
+data
