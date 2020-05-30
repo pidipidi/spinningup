@@ -28,7 +28,7 @@ def mpi_fork(n, bind_to_core=False):
             OMP_NUM_THREADS="1",
             IN_MPI="1"
         )
-        args = ["mpirun", "-np", str(n)]
+        args = ["mpirun", "--oversubscribe", "-np", str(n)]
         if bind_to_core:
             args += ["-bind-to", "core"]
         args += [sys.executable] + sys.argv
@@ -87,6 +87,6 @@ def mpi_statistics_scalar(x, with_min_and_max=False):
 
     if with_min_and_max:
         global_min = mpi_op(np.min(x) if len(x) > 0 else np.inf, op=MPI.MIN)
-        global_max = mpi_op(np.max(x) if len(x) > 0 else -np.inf, op=MPI.MAX)
+        global_max = mpi_op(np.max(x) if len(x) > 0 else -np.inf, op=MPI.MAX)            
         return mean, std, global_min, global_max
     return mean, std

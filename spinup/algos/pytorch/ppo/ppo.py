@@ -210,7 +210,12 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     act_dim = env.action_space.shape
 
     # Create actor-critic module
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+    if type(actor_critic) is str and actor_critic.find("CNNActorCritic")>=0:
+        ac = core.CNNActorCritic(env.observation_space, env.action_space, **ac_kwargs)
+    elif type(actor_critic) is str and actor_critic.find("MultimodalActorCritic")>=0:
+        ac = core.MultimodalActorCritic(env.observation_space, env.action_space, **ac_kwargs)
+    else:
+        ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
 
     # Sync params across processes
     sync_params(ac)
@@ -222,6 +227,8 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     # Set up experience buffer
     local_steps_per_epoch = int(steps_per_epoch / num_procs())
     buf = PPOBuffer(obs_dim, act_dim, local_steps_per_epoch, gamma, lam)
+
+    assert max_ep_len<=local_steps_per_epoch, "Please check if max_ep_len <= steps_per_epoch / num_cpu. If not, increase steps_per_epoch."
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
@@ -256,6 +263,10 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     def update():
         data = buf.get()
+
+        ## from IPython import embed; embed(); sys.exit()
+        ## if 'CNNActorCritic' in str(type(ac)): 
+        ##     data['obs'] = ac.shared(data['obs'])
 
         pi_l_old, pi_info_old = compute_loss_pi(data)
         pi_l_old = pi_l_old.item()
@@ -321,13 +332,12 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 if timeout or epoch_ended:
                     _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
                 else:
-                    v = 0
+                    v = np.array(0, dtype=np.float32)
                 buf.finish_path(v)
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
                 o, ep_ret, ep_len = env.reset(), 0, 0
-
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs-1):
@@ -353,6 +363,7 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         logger.log_tabular('Time', time.time()-start_time)
         logger.dump_tabular()
 
+            
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
